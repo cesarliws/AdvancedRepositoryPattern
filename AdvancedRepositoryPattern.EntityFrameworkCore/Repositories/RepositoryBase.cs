@@ -1,13 +1,20 @@
-﻿using AdvancedRepositoryPattern.Domain.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
+using AdvancedRepositoryPattern.Domain.Models;
+
 namespace AdvancedRepositoryPattern.EntityFrameworkCore.Repositories
 {
+    public enum LoadStrategy
+    {
+        AsNoTracking,
+        AutoDetectChanges
+    }
+
     public abstract class RepositoryBase<TEntity, TContext>
         where TEntity : Entity
         where TContext : DbContext
@@ -24,20 +31,31 @@ namespace AdvancedRepositoryPattern.EntityFrameworkCore.Repositories
         (
             int skip,
             int take,
-            bool asNoTracking = true
+            LoadStrategy loadStrategy = LoadStrategy.AsNoTracking
         )
         {
-            var databaseCount = await DbSet.CountAsync().ConfigureAwait(false);
-            if (asNoTracking)
+            var databaseCount = await DbSet
+                .CountAsync()
+                .ConfigureAwait(false);
+                
+            if (loadStrategy == LoadStrategy.AsNoTracking)
                 return new Tuple<IEnumerable<TEntity>, int>
                 (
-                    await DbSet.AsNoTracking().Skip(skip).Take(take).ToListAsync().ConfigureAwait(false),
+                    await DbSet.AsNoTracking()
+                        .Skip(skip)
+                        .Take(take)
+                        .ToListAsync()
+                        .ConfigureAwait(false),
                     databaseCount
                 );
 
             return new Tuple<IEnumerable<TEntity>, int>
             (
-                await DbSet.Skip(skip).Take(take).ToListAsync().ConfigureAwait(false),
+                await DbSet
+                    .Skip(skip)
+                    .Take(take)
+                    .ToListAsync()
+                    .ConfigureAwait(false),
                 databaseCount
             );
         }
@@ -47,20 +65,31 @@ namespace AdvancedRepositoryPattern.EntityFrameworkCore.Repositories
             int skip,
             int take,
             Expression<Func<TEntity, bool>> where,
-            bool asNoTracking = true
+            LoadStrategy loadStrategy = LoadStrategy.AsNoTracking
         )
         {
             var databaseCount = await DbSet.CountAsync().ConfigureAwait(false);
-            if (asNoTracking)
+            if (loadStrategy == LoadStrategy.AsNoTracking)
                 return new Tuple<IEnumerable<TEntity>, int>
                 (
-                    await DbSet.AsNoTracking().Where(where).Skip(skip).Take(take).ToListAsync().ConfigureAwait(false),
+                    await DbSet
+                        .AsNoTracking()
+                        .Where(where)
+                        .Skip(skip)
+                        .Take(take)
+                        .ToListAsync()
+                        .ConfigureAwait(false),
                     databaseCount
                 );
 
             return new Tuple<IEnumerable<TEntity>, int>
             (
-                await DbSet.Where(where).Skip(skip).Take(take).ToListAsync().ConfigureAwait(false),
+                await DbSet
+                    .Where(where)
+                    .Skip(skip)
+                    .Take(take)
+                    .ToListAsync()
+                    .ConfigureAwait(false),
                 databaseCount
             );
         }
@@ -71,40 +100,62 @@ namespace AdvancedRepositoryPattern.EntityFrameworkCore.Repositories
             int take,
             Expression<Func<TEntity, bool>> where,
             Expression<Func<TEntity, object>> orderBy,
-            bool asNoTracking = true
+            LoadStrategy loadStrategy = LoadStrategy.AsNoTracking
         )
         {
-            var databaseCount = await DbSet.CountAsync().ConfigureAwait(false);
-            if (asNoTracking)
+            var databaseCount = await DbSet
+                .CountAsync()
+                .ConfigureAwait(false);
+
+            if (loadStrategy == LoadStrategy.AsNoTracking)
                 return new Tuple<IEnumerable<TEntity>, int>
                 (
-                    await DbSet.AsNoTracking().OrderBy(orderBy).Where(where).Skip(skip).Take(take).ToListAsync().ConfigureAwait(false),
+                    await DbSet
+                        .AsNoTracking()
+                        .OrderBy(orderBy)
+                        .Where(where)
+                        .Skip(skip)
+                        .Take(take)
+                        .ToListAsync()
+                        .ConfigureAwait(false),
                     databaseCount
                 );
 
             return new Tuple<IEnumerable<TEntity>, int>
             (
-                await DbSet.OrderBy(orderBy).Where(where).Skip(skip).Take(take).ToListAsync().ConfigureAwait(false),
+                await DbSet
+                    .OrderBy(orderBy)
+                    .Where(where)
+                    .Skip(skip)
+                    .Take(take)
+                    .ToListAsync()
+                    .ConfigureAwait(false),
                 databaseCount
             );
         }
 
-
-        public virtual async Task<TEntity> GetByIdAsync(int entityId, bool asNoTracking = true)
+        public virtual async Task<TEntity> GetByIdAsync(int entityId, LoadStrategy loadStrategy = LoadStrategy.AsNoTracking)
         {
-            return asNoTracking
-                ? await DbSet.AsNoTracking().SingleOrDefaultAsync(entity => entity.Id == entityId).ConfigureAwait(false)
+            return loadStrategy == LoadStrategy.AsNoTracking
+                ? await DbSet
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(entity => entity.Id == entityId)
+                    .ConfigureAwait(false)
                 : await DbSet.FindAsync(entityId).ConfigureAwait(false);
         }
 
         public virtual async Task AddAsync(TEntity entity)
         {
-            await DbSet.AddAsync(entity).ConfigureAwait(false);
+            await DbSet
+                .AddAsync(entity)
+                .ConfigureAwait(false);
         }
 
         public virtual async Task AddCollectionAsync(IEnumerable<TEntity> entities)
         {
-            await DbSet.AddRangeAsync(entities).ConfigureAwait(false);
+            await DbSet
+                .AddRangeAsync(entities)
+                .ConfigureAwait(false);
         }
 
         public virtual IEnumerable<TEntity> AddCollectionWithProxy(IEnumerable<TEntity> entities)
@@ -115,7 +166,6 @@ namespace AdvancedRepositoryPattern.EntityFrameworkCore.Repositories
                 yield return entity;
             }
         }
-
 
         public virtual Task UpdateAsync(TEntity entity)
         {
@@ -128,7 +178,6 @@ namespace AdvancedRepositoryPattern.EntityFrameworkCore.Repositories
             DbSet.UpdateRange(entities);
             return Task.CompletedTask;
         }
-
 
         public virtual IEnumerable<TEntity> UpdateCollectionWithProxy(IEnumerable<TEntity> entities)
         {
